@@ -29,57 +29,67 @@ int main(int argc, char *argv[]){
     if(bind(socket_desc, (struct sockaddr *)&servidor, sizeof(servidor)) < 0){
         printf("Erro ao fazer link\n");
     }
-    printf("Link realizado com sucesso\n");
+    printf("Link realizado com sucesso\n\n");
     listen(socket_desc, 5);
 
     //Aceitando e tratando novas conexões.
     struct sockaddr_in cliente;
-    printf("Aguardando por conexões ...\n");
+    printf("Aguardando por conexões ...\n\n");
     int c = sizeof(cliente);
-    int connection = accept(socket_desc, (struct sockaddr *)&cliente, (socklen_t *)&c);
-    if (connection < 0){
-        printf("Erro ao receber conexão\n");
-        return -1;
+    int connection;
+    while ( connection = accept(socket_desc, (struct sockaddr *)&cliente, (socklen_t *)&c) ){
+        if (connection < 0){
+            printf("Erro ao receber conexão\n");
+            return -1;
+        }
+        
+        //Pegando IP e porta do cliente.
+        struct sockaddr_in client;
+        char *client_ip;
+        int client_port;
+        client_ip = inet_ntoa(client.sin_addr);
+        client_port = ntohs(client.sin_port);
+        printf("Cliente conectado: %s : [%d]\n", client_ip, client_port);
+
+        
+        //Enviando mensagem ao cliente. 
+        char *message;
+        message = "Digite o termo de fibonacci desejado: ";
+        if (write(connection, message, strlen(message)) < 0){
+            printf("Falha no envio da mensagem\n");
+            return -1;
+        }
+
+
+        //Lendo os dados.
+        int tamanho;
+        int n_esimo;
+        if ((tamanho = read(connection, (int *)&n_esimo, sizeof(n_esimo))) < 0){
+            printf("Erro ao receber dados do client.\n");
+            return -1;
+        }
+        printf("Termo recebido: %d\n", n_esimo);
+
+       
+        //Calculo do fibonacci.
+        unsigned long long  answer[n_esimo];
+        answer[0] = 0;
+        answer[1] = 1;
+
+        for (int i = 2; i < n_esimo; i++){
+            answer[i] = -1;
+        }
+        recursiveFibonacci(answer, n_esimo-1);
+
+        if (write(connection, answer, sizeof(answer)) < 0){
+            printf("Falha no envio da mensagem\n");
+            return -1;
+        }
+        printf("Termo enviado com sucesso.\n\n");
     }
     
-    //Pegando IP e porta do cliente.
-    struct sockaddr_in client;
-    char *client_ip;
-    int client_port;
-    client_ip = inet_ntoa(client.sin_addr);
-    client_port = ntohs(client.sin_port);
-    printf("Cliente conectado: %s : [%d]\n", client_ip, client_port);
-
-    
-    //Enviando mensagem ao cliente. 
-    char *message;
-    message = "Digite o termo de fibonacci desejado: ";
-    write(connection, message, strlen(message));
-
-
-    //Lendo os dados.
-    int tamanho;
-    int n_esimo;
-    if ((tamanho = read(connection, (int *)&n_esimo, sizeof(n_esimo))) < 0){
-        printf("Erro ao receber dados do client.\n");
-        return -1;
-    }
-    printf("Termo recebido: %d\n", n_esimo);
-
-   
-    //Calculo do fibonacci.
-    unsigned long long  answer[n_esimo];
-    answer[0] = 0;
-    answer[1] = 1;
-
-    for (int i = 2; i < n_esimo; i++){
-        answer[i] = -1;
-    }
-    recursiveFibonacci(answer, n_esimo-1);
-
-    write(connection, answer, sizeof(answer));
     close(connection);
 
-    
+        
     return 0;
 }
